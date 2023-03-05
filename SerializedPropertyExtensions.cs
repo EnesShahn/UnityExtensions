@@ -107,34 +107,33 @@ namespace EnesShahn.Extensions
         {
             property = property.Copy();
             SerializedObject serializedObject = property.serializedObject;
-            UnityEngine.Object targetObject = serializedObject.targetObject;
             var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
-            string[] propPathSplit = property.propertyPath.Split('.');
+            string pathAdjusted = property.propertyPath.Replace(".Array.data", ".ARR");
+            string[] propPathSplit = pathAdjusted.Split('.');
 
-            Type containerObjectType = targetObject.GetType();
+            Type containerObjectType = serializedObject.targetObject.GetType();
             FieldInfo currentObjectFieldInfo = containerObjectType.GetField(propPathSplit[0], bindingFlags);
-            object currentObject = currentObjectFieldInfo.GetValue(targetObject);
+            object currentObject = currentObjectFieldInfo.GetValue(serializedObject.targetObject);
             SerializedProperty currentProperty = serializedObject.FindProperty(propPathSplit[0]);
-
-            //UnityEngine.Debug.Log(property.propertyPath);
 
             yield return new SPInfo(currentProperty.Copy(), currentObject, currentObjectFieldInfo.FieldType);
             for (int i = 1; i < propPathSplit.Length; i++)
             {
                 var currentObjectType = currentObject.GetType();
+
                 Type fieldType = null;
-                if (propPathSplit[i].Equals("Array"))
+
+                if (propPathSplit[i].StartsWith("ARR["))
                 {
-                    i++;
                     var pathRegexMatch = rx.Match(propPathSplit[i]);
                     int index = Convert.ToInt32(pathRegexMatch.Groups[1].Value);
 
                     Array array = null;
                     if (currentObjectType.IsGenericType && currentObjectType.GetGenericTypeDefinition() == typeof(List<>))
                     {
-                        fieldType = currentObjectType;
                         currentObjectFieldInfo = currentObjectType.GetField("_items", bindingFlags);
+                        fieldType = currentObjectFieldInfo.FieldType;
                         array = (Array)currentObjectFieldInfo.GetValue(currentObject);
                     }
                     else if (currentObjectType.IsArray)
@@ -143,12 +142,12 @@ namespace EnesShahn.Extensions
                         array = (Array)currentObject;
                     }
 
-                    if (array == null)
+                    if (index <= array.Length) // Happens when we are trying to get the item at index before it being applied to the SerializedObject (Only occurs on nested arrays)
                     {
-                        UnityEngine.Debug.Log("Miserable failure");
+                        property.serializedObject.ApplyModifiedProperties();
+                        //UnityEngine.Debug.LogWarning($"The item at index {index} is not yet applied to the object. forced ApplyModifiedProperties() on SerializedObject");
                     }
 
-                    //UnityEngine.Debug.Log(index);
                     currentProperty = currentProperty.GetArrayElementAtIndex(index);
                     currentObject = array.GetValue(index);
                 }
