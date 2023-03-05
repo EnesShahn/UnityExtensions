@@ -19,9 +19,9 @@ namespace EnesShahn.Extensions
 
             return typesList.ToArray();
         }
-		public static Type GetGenericTypeDefinitionIfGeneric(this Type type)
-		{
-			return type.IsGenericType ? type.GetGenericTypeDefinition() : type;
-		}
+        public static Type GetGenericTypeDefinitionIfGeneric(this Type type)
+        {
+            return type.IsGenericType ? type.GetGenericTypeDefinition() : type;
+        }
     }
 }
