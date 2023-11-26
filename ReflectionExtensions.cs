@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System;
 using System.Reflection;
+using UnityEngine;
 
 namespace EnesShahn.Extensions
 {
@@ -11,14 +12,20 @@ namespace EnesShahn.Extensions
             List<Type> typesList = new List<Type>();
             if (includeSelf) typesList.Add(type);
 
-            var types = Assembly.GetAssembly(type).GetTypes();
-            foreach (var t in types)
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            foreach (var assembly in assemblies)
             {
-                if (t.IsSubclassOf(type)) typesList.Add(t);
+                var types = assembly.GetTypes();
+                foreach (var t in types)
+                {
+                    if (t != type && type.IsAssignableFrom(t))
+                        typesList.Add(t);
+                }
             }
 
             return typesList.ToArray();
         }
+
         public static Type GetGenericTypeDefinitionIfGeneric(this Type type)
         {
             return type.IsGenericType ? type.GetGenericTypeDefinition() : type;
